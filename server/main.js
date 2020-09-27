@@ -36,6 +36,20 @@ function getSession(id) {
   return sessions.get(id);
 }
 
+function broadcastSession(session) {
+  const clients = [...session.clients];
+
+  clients.forEach(client => {
+    client.send({
+      type: 'session-broadcast',
+      peers: {
+        you: client.id,
+        clients: clients.map(client => client.id)
+      }
+    });
+  });
+}
+
 server.on('connection', conn => {
   console.log('Connection established');
   const client = createClient(conn);
@@ -55,6 +69,8 @@ server.on('connection', conn => {
     } else if (data.type === 'join-session') {
       const session = getSession(data.id) || createSession(data.id);
       session.join(client);
+
+      broadcastSession(session);
     }
 
     console.log('Sessions', sessions)
@@ -69,6 +85,8 @@ server.on('connection', conn => {
       if (session.clients.size === 0) {
         sessions.delete(session.id);
       }
+
+      broadcastSession(session);
     }
   });
 });
